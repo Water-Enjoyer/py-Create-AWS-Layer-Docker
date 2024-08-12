@@ -1,0 +1,22 @@
+# https://github.com/NaturalHistoryMuseum/pyzbar/issues/40
+
+FROM public.ecr.aws/sam/build-python3.12:1.121.0-20240730174605
+
+WORKDIR /var/task
+
+RUN dnf update -y && \
+    dnf install -y autoconf gettext-devel automake pkgconfig libtool git make gcc-c++ zip
+
+RUN pip install pyzbar -t python/lib/python3.12/site-packages/
+
+RUN git clone https://github.com/mchehab/zbar.git && \
+    cd zbar && \
+    autoreconf -vfi || true && \
+    ./configure && \
+    make
+
+RUN cp zbar/zbar/.libs/libzbar.so.0.3.0 python/lib/python3.12/site-packages/pyzbar/libzbar.so
+
+RUN sed -i "s/find_library('zbar')/('\/opt\/python\/lib\/python3.12\/site-packages\/pyzbar\/libzbar.so')/g" python/lib/python3.12/site-packages/pyzbar/zbar_library.py
+
+RUN zip -r pyzbar_layer.zip python
